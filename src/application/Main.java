@@ -1,5 +1,7 @@
 package application;
 	
+import org.opencv.core.Core;
+
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.stage.Stage;
@@ -21,6 +23,7 @@ public class Main extends Application {
 	@Override
 	public void start(Stage primaryStage) {
 		setPrimaryStage(primaryStage);
+		System.load("C:\\\\Users\\\\admin\\\\Documents\\\\B4J\\\\ImageTrans\\\\Objects\\\\opencv_java450.dll");
 		try {
             // Read file fxml and draw interface.
             Parent root = FXMLLoader.load(getClass()

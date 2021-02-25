@@ -1,11 +1,17 @@
 package application;
 
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.ResourceBundle;
+
+import org.opencv.core.Rect2d;
 
 import com.dynamsoft.dbr.BarcodeReader;
 import com.dynamsoft.dbr.BarcodeReaderException;
@@ -15,13 +21,15 @@ import com.dynamsoft.dbr.Point;
 import com.dynamsoft.dbr.PublicRuntimeSettings;
 import com.dynamsoft.dbr.TextResult;
 
-
+import javafx.embed.swing.SwingFXUtils;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.image.Image;
 import javafx.scene.layout.AnchorPane;
@@ -31,6 +39,11 @@ import javafx.stage.FileChooser;
 public class MyController implements Initializable {
 	private File currentImgFile;
     private BarcodeReader br;
+    private ObjectDetector qrcodeDetector;
+    @FXML
+    private Label timeLbl;
+    @FXML
+    private CheckBox useObjectDetectionChk;
 	@FXML
     private Button loadBtn;
 	@FXML
@@ -45,6 +58,7 @@ public class MyController implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
 		try {
+			qrcodeDetector = new ObjectDetector("C:\\\\Users\\\\admin\\\\Desktop\\\\Yolo-Fastest-opencv-dnn\\\\qrcode-yolov3-tiny.cfg","C:\\\\Users\\\\admin\\\\Desktop\\\\Yolo-Fastest-opencv-dnn\\\\qrcode-yolov3-tiny_last.weights",416,416);
 			br = new BarcodeReader("t0068NQAAAJYBYfmF8T9A4FyRD4gw30Kx9VtWdhk4M7K8OgvmtsAySfNNO0Fi3uIBlvoHUBWLJB4MQ1bUt9k8v+TrrG1cXio=");			
 		} catch (BarcodeReaderException e) {
 			e.printStackTrace();
@@ -52,7 +66,17 @@ public class MyController implements Initializable {
     }
     
     public void loadBtn_MouseClicked(Event event) throws IOException, BarcodeReaderException {
-    	System.out.println("Button Clicked!");     
+    	Date startDate = new Date();
+    	Long startTime = startDate.getTime();
+    	System.out.println("Button Clicked!");    
+    	if (currentImgFile==null) {
+    		System.out.println("no img!");   
+    		return;
+    	}
+    	Image img = new Image(currentImgFile.toURI().toString());
+    	redrawImage(img);
+    	String imgPath=currentImgFile.getAbsolutePath();
+    	System.out.println(imgPath);
     	String template = templateTA.getText();
     	try {
         	System.out.println(template);
@@ -61,24 +85,68 @@ public class MyController implements Initializable {
     		br.resetRuntimeSettings();
     	}
     	unifyCoordinateReturnType();
-        String imgPath=currentImgFile.getAbsolutePath();
-        System.out.println(imgPath);
-		TextResult[] results = br.decodeFile(imgPath, "");
-        StringBuilder sb = new StringBuilder();
-        
-        for(int i =0; i<results.length;i++){
-        	sb.append((i+1));
+    	
+    	List<TextResult> allResults = new ArrayList<TextResult>();
+    	
+    	if (useObjectDetectionChk.isSelected()) {        	
+        	List<Rect2d> rects = qrcodeDetector.Detect(imgPath);
+        	for (Rect2d rect:rects) {
+        		            	
+            	BufferedImage bImage = SwingFXUtils.fromFXImage(img, null);
+            	int x,y,maxX,maxY,width,height;
+            	x=(int) rect.x;
+            	y=(int) rect.y;
+            	width=(int) rect.width;
+            	height=(int) rect.height;   
+            	maxX=(int) rect.width+x;
+            	maxY=(int) rect.height+y;            	
+            	if (width!=height) {
+            		if (width>height) {
+            			y=Math.max(y-(width-height)/2,0);            			
+            			maxY=(int) Math.min(maxY+(width-height)/2,img.getHeight());
+            			height=maxY-y;
+            		}else {
+            			x=Math.max(x-(height-width)/2,0);            			
+            			maxX=(int) Math.min(maxX+(height-width)/2,img.getWidth());
+            			width=maxX-x;
+            		}
+                	rect.x=x;
+                	rect.y=y;
+                	rect.width=width;
+                	rect.height=height;
+            	}
+            	overlayBox(rect);
+            	BufferedImage cropped = bImage.getSubimage(x,y,width,height);
+            	TextResult[] results = br.decodeBufferedImage(cropped, "");
+        		for(int i =0; i<results.length;i++){
+        			allResults.add(results[i]);
+        		}
+        	}
+
+    	}else {
+    		TextResult[] results = br.decodeFile(imgPath, "");
+    		for(int i =0; i<results.length;i++){
+    			allResults.add(results[i]);
+    			overlayCode(results[i]);
+    		}
+    	}
+    	StringBuilder sb = new StringBuilder(); 
+    	int index=0;
+    	for (TextResult result:allResults) {
+    		index=index+1;
+    		sb.append(index);
         	sb.append("\n");
         	sb.append("Type: ");
-        	sb.append(results[i].barcodeFormatString);
+        	sb.append(result.barcodeFormatString);
         	sb.append("\n");
         	sb.append("Text: ");
-        	sb.append(results[i].barcodeText);
-        	sb.append("\n\n");
-        	showOneBox(results[i]);
-        }
-        
-        resultTA.setText(sb.toString());
+        	sb.append(result.barcodeText);
+        	sb.append("\n\n");        	
+    	}
+    	resultTA.setText(sb.toString());
+    	Date endDate = new Date();
+    	Long endTime = endDate.getTime();
+    	timeLbl.setText("Time: "+(endTime-startTime)+"ms");
     }
  
     public void cv_MouseClicked(Event event) {
@@ -89,17 +157,20 @@ public class MyController implements Initializable {
             currentImgFile = fileChooser.showOpenDialog(Main.getPrimaryStage());
             Image img = new Image(currentImgFile.toURI().toString());
             System.out.println(img.getWidth());
-            cv.setWidth(img.getWidth());
-            cv.setHeight(img.getHeight());
-            GraphicsContext gc = cv.getGraphicsContext2D();
-            gc.drawImage(img, 0, 0, cv.getWidth(), cv.getHeight());
-            //doDrawing(gc);
+            redrawImage(img);
         } catch (Exception e) {
         	
         }
     }
+    
+    private void redrawImage(Image img) {
+        cv.setWidth(img.getWidth());
+        cv.setHeight(img.getHeight());
+        GraphicsContext gc = cv.getGraphicsContext2D();
+        gc.drawImage(img, 0, 0, cv.getWidth(), cv.getHeight());
+    }
 
-    private void showOneBox(TextResult result) {
+    private void overlayCode(TextResult result) {
     	GraphicsContext gc=cv.getGraphicsContext2D();
 
 		Point[] points=result.localizationResult.resultPoints;
@@ -110,8 +181,6 @@ public class MyController implements Initializable {
 		maxX=0;
 		maxY=0;
 		for (Point point : points) {
-			System.out.println(point.x);
-			System.out.println(point.y);
 			minX=Math.min(minX,point.x);
 			minY=Math.min(minY,point.y);
 			maxX=Math.max(point.x,maxX);
@@ -120,6 +189,13 @@ public class MyController implements Initializable {
 		gc.setStroke(Color.RED);
 		gc.setLineWidth(5);
 		gc.strokeRect(minX, minY, maxX-minX, maxY-minY);
+    }
+    
+    private void overlayBox(Rect2d rect) {
+    	GraphicsContext gc=cv.getGraphicsContext2D();
+		gc.setStroke(Color.RED);
+		gc.setLineWidth(5);
+		gc.strokeRect(rect.x, rect.y, rect.width, rect.height);
     }
     
     private void unifyCoordinateReturnType() {
