@@ -59,7 +59,7 @@ public class MyController implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
 		try {
 			qrcodeDetector = new ObjectDetector("C:\\\\Users\\\\admin\\\\Desktop\\\\Yolo-Fastest-opencv-dnn\\\\qrcode-yolov3-tiny.cfg","C:\\\\Users\\\\admin\\\\Desktop\\\\Yolo-Fastest-opencv-dnn\\\\qrcode-yolov3-tiny_last.weights",416,416);
-			br = new BarcodeReader("t0068NQAAAJYBYfmF8T9A4FyRD4gw30Kx9VtWdhk4M7K8OgvmtsAySfNNO0Fi3uIBlvoHUBWLJB4MQ1bUt9k8v+TrrG1cXio=");			
+			br = new BarcodeReader("t0068NQAAAJYBYfmF8T9A4FyRD4gw30Kx9VtWdhk4M7K8OgvmtsAySfNNO0Fi3uIBlvoHUBWLJB4MQ1bUt9k8v+TrrG1cXio=");
 		} catch (BarcodeReaderException e) {
 			e.printStackTrace();
 		}		

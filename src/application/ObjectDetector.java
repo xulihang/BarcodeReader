@@ -1,16 +1,12 @@
 package application;
 
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.imageio.ImageIO;
 
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
 import org.opencv.core.MatOfFloat;
 import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfRect2d;
@@ -24,8 +20,6 @@ import org.opencv.imgcodecs.Imgcodecs;
 
 import org.opencv.utils.Converters;
 
-import javafx.embed.swing.SwingFXUtils;
-import javafx.scene.image.Image;
 
 public class ObjectDetector {
 
@@ -57,24 +51,16 @@ public class ObjectDetector {
 	    return Detect(img);	
 	}
 	
-	public List<Rect2d> Detect(Image img) throws IOException {
-		BufferedImage bImage = SwingFXUtils.fromFXImage(img, null);
-		return Detect(BufferedImage2Mat(bImage));	
-	}
-	
 	public List<Rect2d> Detect(Mat img) {
 	    //Create a 4D blob from a frame.
 	    Mat blob = Dnn.blobFromImage(img, 1/255.0, new Size(inpWidth,inpHeight), new Scalar(0,0,0), false, false);
-
 	    //Sets the input to the network
 	    net.setInput(blob);
 	    //Runs the forward pass to get output of the output layers
 	    List<Mat> outs = new ArrayList<>();
         List<String> outBlobNames = getOutputNames();
 	    net.forward(outs,outBlobNames);
-	    System.out.println(outs);
-	    return postprocess(img,outs,true);
-	    		
+	    return postprocess(img,outs,true);	    		
 	}
 	
 	//Get the names of the output layers
@@ -152,13 +138,6 @@ public class ObjectDetector {
 	        }else {
 	        	return rects2d;	
 	        }
-	}
-	
-	public static Mat BufferedImage2Mat(BufferedImage image) throws IOException {
-	    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-	    ImageIO.write(image, "jpg", byteArrayOutputStream);
-	    byteArrayOutputStream.flush();
-	    return Imgcodecs.imdecode(new MatOfByte(byteArrayOutputStream.toByteArray()), Imgcodecs.IMREAD_UNCHANGED);
 	}
 }
 
