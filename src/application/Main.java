@@ -1,7 +1,5 @@
 package application;
 	
-import org.opencv.core.Core;
-
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.stage.Stage;
