@@ -11,6 +11,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.ResourceBundle;
 
+import javax.imageio.ImageIO;
+
 import org.opencv.core.Rect2d;
 
 import com.dynamsoft.dbr.BarcodeReader;
@@ -20,11 +22,21 @@ import com.dynamsoft.dbr.EnumResultCoordinateType;
 import com.dynamsoft.dbr.Point;
 import com.dynamsoft.dbr.PublicRuntimeSettings;
 import com.dynamsoft.dbr.TextResult;
+import com.google.zxing.BinaryBitmap;
+import com.google.zxing.ChecksumException;
+import com.google.zxing.FormatException;
+import com.google.zxing.NotFoundException;
+import com.google.zxing.RGBLuminanceSource;
+import com.google.zxing.Result;
+import com.google.zxing.ResultPoint;
+import com.google.zxing.common.HybridBinarizer;
+import com.google.zxing.qrcode.QRCodeReader;
 
 import javafx.embed.swing.SwingFXUtils;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
@@ -44,6 +56,8 @@ public class MyController implements Initializable {
     private Label timeLbl;
     @FXML
     private CheckBox useObjectDetectionChk;
+    @FXML
+    private CheckBox useZXingChk;
 	@FXML
     private Button loadBtn;
 	@FXML
@@ -84,7 +98,7 @@ public class MyController implements Initializable {
     	}
     	unifyCoordinateReturnType();
     	
-    	List<TextResult> allResults = new ArrayList<TextResult>();
+    	List<BarcodeResult> allResults = new ArrayList<BarcodeResult>();
     	
     	StringBuilder timeSb = new StringBuilder();
     	Date startDate = new Date();
@@ -95,8 +109,9 @@ public class MyController implements Initializable {
         	List<Rect2d> rects = qrcodeDetector.Detect(imgPath);
         	Date detectedDate = new Date();
         	detectedTime = detectedDate.getTime();
+        	int rectIndex=0;
         	for (Rect2d rect:rects) {
-        		            	
+        		rectIndex=rectIndex+1; 	
             	BufferedImage bImage = SwingFXUtils.fromFXImage(img, null);
             	int x,y,maxX,maxY,width,height;
             	x=(int) Math.max(rect.x,0);
@@ -121,37 +136,49 @@ public class MyController implements Initializable {
                 	rect.height=height;
             	}
 
-            	overlayBox(rect);
+            	overlayBox(rect,rectIndex);
             	
             	BufferedImage cropped = bImage.getSubimage(x,y,width,height);
-            	TextResult[] results = br.decodeBufferedImage(cropped, "");
+            	if (useZXingChk.isSelected()==true) {
+            		allResults.add(readQRCode(cropped));
+            	}else {
+            		TextResult[] results = br.decodeBufferedImage(cropped, "");
+            		for(int i =0; i<results.length;i++){
+            			allResults.add(TextResult2BarcodeResult(results[i]));
+            		}
+            	}
+            	
             	Date endDate = new Date();
             	endTime = endDate.getTime();
-        		for(int i =0; i<results.length;i++){
-        			allResults.add(results[i]);
-        		}
+        		
         	}
 
     	}else {
-    		TextResult[] results = br.decodeFile(imgPath, "");
+    		if (useZXingChk.isSelected()==true) {
+    			BarcodeResult r = readQRCode(imgPath);
+    			allResults.add(r);
+    			overlayCode(r);
+    		} else {
+    			for (TextResult tr:br.decodeFile(imgPath, "")) {
+    				BarcodeResult r = TextResult2BarcodeResult(tr);
+    				allResults.add(r);
+    				overlayCode(r);
+    			}
+    		}
         	Date endDate = new Date();
         	endTime = endDate.getTime();
-    		for(int i =0; i<results.length;i++){
-    			allResults.add(results[i]);
-    			overlayCode(results[i]);
-    		}
     	}
     	StringBuilder sb = new StringBuilder(); 
     	int index=0;
-    	for (TextResult result:allResults) {
+    	for (BarcodeResult result:allResults) {
     		index=index+1;
     		sb.append(index);
         	sb.append("\n");
         	sb.append("Type: ");
-        	sb.append(result.barcodeFormatString);
+        	sb.append(result.format);
         	sb.append("\n");
         	sb.append("Text: ");
-        	sb.append(result.barcodeText);
+        	sb.append(result.text);
         	sb.append("\n\n");        	
     	}
     	resultTA.setText(sb.toString());
@@ -191,24 +218,24 @@ public class MyController implements Initializable {
         gc.drawImage(img, 0, 0, cv.getWidth(), cv.getHeight());
     }
 
-    private void overlayCode(TextResult result) {
+    private void overlayCode(BarcodeResult result) {
     	GraphicsContext gc=cv.getGraphicsContext2D();
 
-		Point[] points=result.localizationResult.resultPoints;
+		List<Point2D> points=result.points;
 		
 		gc.setStroke(Color.RED);
 		gc.setLineWidth(5);
 		gc.beginPath();
-		for (int i = 0;i<points.length-1;i++) {
-			Point point=points[i];
-			Point nextPoint=points[i+1];
-			gc.moveTo(point.x, point.y);
-			gc.lineTo(nextPoint.x, nextPoint.y);			
+		for (int i = 0;i<points.size()-1;i++) {
+			Point2D point=points.get(i);
+			Point2D nextPoint=points.get(i+1);
+			gc.moveTo(point.getX(), point.getY());
+			gc.lineTo(nextPoint.getX(), nextPoint.getY());			
 		}
-		Point firstPoint = points[0]; 
-		Point lastPoint = points[points.length-1]; 
-		gc.moveTo(lastPoint.x, lastPoint.y);
-		gc.lineTo(firstPoint.x, firstPoint.y);
+		Point2D firstPoint = points.get(0); 
+		Point2D lastPoint = points.get(points.size()-1); 
+		gc.moveTo(lastPoint.getX(), lastPoint.getY());
+		gc.lineTo(firstPoint.getX(), firstPoint.getY());
 		gc.closePath();
 		gc.stroke();
     }
@@ -235,7 +262,7 @@ public class MyController implements Initializable {
 		gc.strokeRect(minX, minY, maxX-minX, maxY-minY);
     }
     
-    private void overlayBox(Rect2d rect) {
+    private void overlayBox(Rect2d rect,int index) {
     	GraphicsContext gc=cv.getGraphicsContext2D();
 		gc.setStroke(Color.RED);
 		gc.setLineWidth(5);
@@ -252,5 +279,61 @@ public class MyController implements Initializable {
 			e.printStackTrace();
 		}
     }
+    
+    public BarcodeResult readQRCode(String fileName) {
+		File file = new File(fileName);
+		BufferedImage image = null;
+		try {
+			image = ImageIO.read(file);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return readQRCode(image);
+	}
+    
+    public BarcodeResult readQRCode(BufferedImage image) {
+    	System.out.println("using zxing");
+		BinaryBitmap bitmap = null;
+		Result result = null;
+		int[] pixels = image.getRGB(0, 0, image.getWidth(), image.getHeight(), null, 0, image.getWidth());
+		RGBLuminanceSource source = new RGBLuminanceSource(image.getWidth(), image.getHeight(), pixels);
+		bitmap = new BinaryBitmap(new HybridBinarizer(source));
 
+		QRCodeReader reader = new QRCodeReader();	
+		try {
+			result = reader.decode(bitmap);
+			return ZxingResult2BarcodeResult(result);
+		} catch (NotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ChecksumException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (FormatException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		return null;
+	}
+    
+    private BarcodeResult TextResult2BarcodeResult(TextResult result) {
+    	Point[] points=result.localizationResult.resultPoints;
+    	List<Point2D> newPoints = new ArrayList<Point2D>();
+    	for (Point point:points) {
+    		Point2D point2d = new Point2D(point.x,point.y);
+    		newPoints.add(point2d);
+    	}
+    	return new BarcodeResult(newPoints,result.barcodeText,result.barcodeFormatString);
+    }
+    
+    private BarcodeResult ZxingResult2BarcodeResult(Result result) {
+    	ResultPoint[] points=result.getResultPoints();
+    	List<Point2D> newPoints = new ArrayList<Point2D>();
+    	for (ResultPoint point:points) {
+    		Point2D point2d = new Point2D(point.getX(),point.getY());
+    		newPoints.add(point2d);
+    	}
+    	return new BarcodeResult(newPoints,result.getText(),result.getBarcodeFormat().name());
+    }
 }
