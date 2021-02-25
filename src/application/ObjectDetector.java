@@ -121,9 +121,10 @@ public class ObjectDetector {
 	                }
 	            }
 	        }
-	        if (nms==true) {
+	        if (nms==true && rects2d.size()>0) {
 		        float nmsThresh = 0.5f;
-		        MatOfFloat confidences = new MatOfFloat(Converters.vector_float_to_Mat(confs));
+		        Mat converted = Converters.vector_float_to_Mat(confs);
+		        MatOfFloat confidences = new MatOfFloat(converted);
 		        Rect2d[] boxesArray = rects2d.toArray(new Rect2d[0]);
 		        MatOfRect2d boxes = new MatOfRect2d(boxesArray);
 		        //boxes.fromArray(boxesArray);

@@ -79,7 +79,6 @@ public class MyController implements Initializable {
     	System.out.println(imgPath);
     	String template = templateTA.getText();
     	try {
-        	System.out.println(template);
         	br.initRuntimeSettingsWithString(template,EnumConflictMode.CM_OVERWRITE);   
     	}  catch (Exception e) {
     		br.resetRuntimeSettings();
@@ -94,19 +93,19 @@ public class MyController implements Initializable {
         		            	
             	BufferedImage bImage = SwingFXUtils.fromFXImage(img, null);
             	int x,y,maxX,maxY,width,height;
-            	x=(int) rect.x;
-            	y=(int) rect.y;
+            	x=(int) Math.max(rect.x,0);
+            	y=(int) Math.max(rect.y,0);
             	width=(int) rect.width;
             	height=(int) rect.height;   
             	maxX=(int) rect.width+x;
             	maxY=(int) rect.height+y;            	
             	if (width!=height) {
             		if (width>height) {
-            			y=Math.max(y-(width-height)/2,0);            			
+            			y=Math.max(y-(width-height)/2,1);            			
             			maxY=(int) Math.min(maxY+(width-height)/2,img.getHeight());
             			height=maxY-y;
             		}else {
-            			x=Math.max(x-(height-width)/2,0);            			
+            			x=Math.max(x-(height-width)/2,1);               			
             			maxX=(int) Math.min(maxX+(height-width)/2,img.getWidth());
             			width=maxX-x;
             		}
@@ -115,7 +114,9 @@ public class MyController implements Initializable {
                 	rect.width=width;
                 	rect.height=height;
             	}
+
             	overlayBox(rect);
+            	
             	BufferedImage cropped = bImage.getSubimage(x,y,width,height);
             	TextResult[] results = br.decodeBufferedImage(cropped, "");
         		for(int i =0; i<results.length;i++){
@@ -171,6 +172,29 @@ public class MyController implements Initializable {
     }
 
     private void overlayCode(TextResult result) {
+    	GraphicsContext gc=cv.getGraphicsContext2D();
+
+		Point[] points=result.localizationResult.resultPoints;
+		
+		gc.setStroke(Color.RED);
+		gc.setLineWidth(5);
+		gc.beginPath();
+		for (int i = 0;i<points.length-1;i++) {
+			Point point=points[i];
+			Point nextPoint=points[i+1];
+			gc.moveTo(point.x, point.y);
+			gc.lineTo(nextPoint.x, nextPoint.y);			
+		}
+		Point firstPoint = points[0]; 
+		Point lastPoint = points[points.length-1]; 
+		gc.moveTo(lastPoint.x, lastPoint.y);
+		gc.lineTo(firstPoint.x, firstPoint.y);
+		gc.closePath();
+		gc.stroke();
+    }
+    
+    
+    private void overlayCode2(TextResult result) {
     	GraphicsContext gc=cv.getGraphicsContext2D();
 
 		Point[] points=result.localizationResult.resultPoints;
