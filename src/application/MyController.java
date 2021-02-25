@@ -66,8 +66,7 @@ public class MyController implements Initializable {
     }
     
     public void loadBtn_MouseClicked(Event event) throws IOException, BarcodeReaderException {
-    	Date startDate = new Date();
-    	Long startTime = startDate.getTime();
+
     	System.out.println("Button Clicked!");    
     	if (currentImgFile==null) {
     		System.out.println("no img!");   
@@ -87,8 +86,15 @@ public class MyController implements Initializable {
     	
     	List<TextResult> allResults = new ArrayList<TextResult>();
     	
+    	StringBuilder timeSb = new StringBuilder();
+    	Date startDate = new Date();
+    	Long startTime = startDate.getTime();
+    	Long detectedTime = null;
+    	Long endTime = null;
     	if (useObjectDetectionChk.isSelected()) {        	
         	List<Rect2d> rects = qrcodeDetector.Detect(imgPath);
+        	Date detectedDate = new Date();
+        	detectedTime = detectedDate.getTime();
         	for (Rect2d rect:rects) {
         		            	
             	BufferedImage bImage = SwingFXUtils.fromFXImage(img, null);
@@ -119,6 +125,8 @@ public class MyController implements Initializable {
             	
             	BufferedImage cropped = bImage.getSubimage(x,y,width,height);
             	TextResult[] results = br.decodeBufferedImage(cropped, "");
+            	Date endDate = new Date();
+            	endTime = endDate.getTime();
         		for(int i =0; i<results.length;i++){
         			allResults.add(results[i]);
         		}
@@ -126,6 +134,8 @@ public class MyController implements Initializable {
 
     	}else {
     		TextResult[] results = br.decodeFile(imgPath, "");
+        	Date endDate = new Date();
+        	endTime = endDate.getTime();
     		for(int i =0; i<results.length;i++){
     			allResults.add(results[i]);
     			overlayCode(results[i]);
@@ -145,9 +155,19 @@ public class MyController implements Initializable {
         	sb.append("\n\n");        	
     	}
     	resultTA.setText(sb.toString());
-    	Date endDate = new Date();
-    	Long endTime = endDate.getTime();
-    	timeLbl.setText("Time: "+(endTime-startTime)+"ms");
+
+    	timeSb.append("Total: ");
+    	timeSb.append(endTime-startTime);
+    	timeSb.append("ms");
+    	if (useObjectDetectionChk.isSelected()) { 
+    		timeSb.append(" Object detection: ");
+        	timeSb.append(detectedTime-startTime);
+        	timeSb.append("ms");
+    		timeSb.append(" DBR: ");
+        	timeSb.append(endTime-detectedTime);
+        	timeSb.append("ms");
+    	}
+    	timeLbl.setText(timeSb.toString());
     }
  
     public void cv_MouseClicked(Event event) {

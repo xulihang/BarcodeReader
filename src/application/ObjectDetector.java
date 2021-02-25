@@ -32,16 +32,24 @@ public class ObjectDetector {
 	private Net net;
 	private int inpHeight;
 	private int inpWidth;
+	
 	public ObjectDetector(Net loadedNet,int width,int height) {
 		net=loadedNet;
 		inpWidth=width;
 		inpHeight=height;
+		init();
 	}
 	
 	public ObjectDetector(String darkNetConfig, String modelWeights, int width,int height) {
 		net = Dnn.readNetFromDarknet(darkNetConfig, modelWeights);
 		inpWidth=width;
 		inpHeight=height;
+		init();
+	}
+	
+	public void init() {
+	    net.setPreferableBackend(Dnn.DNN_BACKEND_OPENCV);
+	    net.setPreferableTarget(Dnn.DNN_TARGET_CPU);
 	}
 	
 	public List<Rect2d> Detect(String imgPath) throws IOException {
@@ -55,8 +63,6 @@ public class ObjectDetector {
 	}
 	
 	public List<Rect2d> Detect(Mat img) {
-	    net.setPreferableBackend(Dnn.DNN_BACKEND_OPENCV);
-	    net.setPreferableTarget(Dnn.DNN_TARGET_CPU);
 	    //Create a 4D blob from a frame.
 	    Mat blob = Dnn.blobFromImage(img, 1/255.0, new Size(inpWidth,inpHeight), new Scalar(0,0,0), false, false);
 
@@ -121,7 +127,7 @@ public class ObjectDetector {
 	                }
 	            }
 	        }
-	        if (nms==true && rects2d.size()>0) {
+	        if (nms==true && rects2d.size()>1) {
 		        float nmsThresh = 0.5f;
 		        Mat converted = Converters.vector_float_to_Mat(confs);
 		        MatOfFloat confidences = new MatOfFloat(converted);
