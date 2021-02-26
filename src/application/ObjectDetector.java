@@ -80,7 +80,7 @@ public class ObjectDetector {
 	private List<Rect2d> postprocess(Mat img, List<Mat> result,Boolean nms) {
 		int imgWidth=img.cols();
 		int imgHeight=img.rows();
-		 float confThreshold = 0.4f; //Insert thresholding beyond which the model will detect objects//
+		 float confThreshold = 0.2f; //Insert thresholding beyond which the model will detect objects//
 	        List<Integer> clsIds = new ArrayList<>();
 	        List<Float> confs = new ArrayList<>();
 	        List<Rect2d> rects2d = new ArrayList<>();

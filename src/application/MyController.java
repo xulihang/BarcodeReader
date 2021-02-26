@@ -123,19 +123,20 @@ public class MyController implements Initializable {
             	if (width!=height) {
             		if (width>height) {
             			y=Math.max(y-(width-height)/2,1);            			
-            			maxY=(int) Math.min(maxY+(width-height)/2,img.getHeight());
-            			height=maxY-y;
+            			maxY=(int) maxY+(width-height)/2;
             		}else {
             			x=Math.max(x-(height-width)/2,1);               			
-            			maxX=(int) Math.min(maxX+(height-width)/2,img.getWidth());
-            			width=maxX-x;
+            			maxX=(int) maxX+(height-width)/2;
             		}
-                	rect.x=x;
-                	rect.y=y;
-                	rect.width=width;
-                	rect.height=height;
             	}
-
+    			maxY=(int) Math.min(maxY,img.getHeight());
+    			height=maxY-y;
+    			maxX=(int) Math.min(maxX,img.getWidth());
+    			width=maxX-x;
+            	rect.x=x;
+            	rect.y=y;
+            	rect.width=width;
+            	rect.height=height;
             	overlayBox(rect,rectIndex);
             	
             	BufferedImage cropped = bImage.getSubimage(x,y,width,height);
